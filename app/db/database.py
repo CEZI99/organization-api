@@ -19,26 +19,26 @@ async def get_engine():
     finally:
         await engine.dispose()
 
-async def wait_for_db():
-    """Ожидание готовности БД"""
-    engine = create_async_engine(
-        settings.DATABASE_URL,
-        echo=True,
-        pool_pre_ping=True
-    )
-    for _ in range(3):  # 3 попытки
-        try:
-            async with engine.begin() as conn:
-                await conn.execute("SELECT 1")
-                return True
-        except Exception as e:
-            print(f"DB not ready, waiting... ({e})")
-            await asyncio.sleep(5)
-    raise Exception("Database connection failed after 10 attempts")
+# async def wait_for_db():
+#     """Ожидание готовности БД"""
+#     engine = create_async_engine(
+#         settings.DATABASE_URL,
+#         echo=True,
+#         pool_pre_ping=True
+#     )
+#     for _ in range(3):  # 3 попытки
+#         try:
+#             async with engine.begin() as conn:
+#                 await conn.execute("SELECT 1")
+#                 return True
+#         except Exception as e:
+#             print(f"DB not ready, waiting... ({e})")
+#             await asyncio.sleep(5)
+#     raise Exception("Database connection failed after 3 attempts")
 
 async def init_db():
     """Инициализация БД с ожиданием"""
-    await wait_for_db()
+    # await wait_for_db()
     async with get_engine() as engine:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
