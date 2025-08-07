@@ -57,7 +57,7 @@ async def get_child_activities(db: AsyncSession, parent_id: int, max_level: int 
             all_ids.extend(await _get_children(child_id, level + 1))
             
         return all_ids
-    
+
     return await _get_children(parent_id)
 
 # --- Organizations CRUD ---

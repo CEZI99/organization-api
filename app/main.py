@@ -43,9 +43,7 @@ app = FastAPI(
 # Настройка CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.DEBUG else [
-        "https://your-production-domain.com"
-    ],
+    allow_origins=["*"] if settings.DEBUG else ["https://prod.ru"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
