@@ -1,5 +1,8 @@
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from redis import asyncio as aioredis
 from app.db import database
 from app.endpoints import organizations, buildings, activities
 from app.dependencies import dependencies
@@ -19,15 +22,24 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Lifespan handler для управления жизненным циклом приложения"""
     # Startup логика
+
+    # Инициализация Redis для кеширования
+    redis = aioredis.from_url(
+        f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}",
+        encoding="utf8",
+        decode_responses=True
+    )
+    FastAPICache.init(RedisBackend(redis), prefix="fastapi-cache")
+    logger.info("Redis cache initialized")
     logger.info("Starting application in %s mode", settings.APP_ENV)
     await database.init_db()
-    
+
     if settings.DEBUG:
         logger.warning("Приложение запущено в DEBUG режиме!")
         logger.info("Документация API доступна по /docs и /redoc")
-    
+
     yield  # Здесь приложение работает
-    
+
     # Shutdown логика (при необходимости)
     logger.info("Shutting down application")
 
@@ -60,5 +72,6 @@ async def health_check():
     return {
         "status": "ok",
         "environment": settings.APP_ENV,
-        "debug": settings.DEBUG
+        "debug": settings.DEBUG,
+        "redis_status": "enabled" if settings.REDIS_HOST else "disabled"
     }

@@ -8,6 +8,13 @@ class Settings:
     # Обязательные параметры
     DATABASE_URL: str = os.getenv("DATABASE_URL")
     API_KEY: str = os.getenv("API_KEY")
+    
+    # Настройки Redis
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", 0))
+    REDIS_PASSWORD: Optional[str] = os.getenv("REDIS_PASSWORD")
+    REDIS_CACHE_TTL: int = int(os.getenv("REDIS_CACHE_TTL", 3600))  # В секундах
 
     # Опциональные параметры с дефолтными значениями
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"

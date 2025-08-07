@@ -1,53 +1,48 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 from app.config import settings
-import asyncio
-from typing import AsyncIterator
-from contextlib import asynccontextmanager
+import logging
+
+logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 
-@asynccontextmanager
-async def get_engine():
-    engine = create_async_engine(
-        settings.DATABASE_URL,
-        echo=True,
-        pool_pre_ping=True  # Добавляем проверку соединения
-    )
-    try:
-        yield engine
-    finally:
-        await engine.dispose()
-
-# async def wait_for_db():
-#     """Ожидание готовности БД"""
-#     engine = create_async_engine(
-#         settings.DATABASE_URL,
-#         echo=True,
-#         pool_pre_ping=True
-#     )
-#     for _ in range(3):  # 3 попытки
-#         try:
-#             async with engine.begin() as conn:
-#                 await conn.execute("SELECT 1")
-#                 return True
-#         except Exception as e:
-#             print(f"DB not ready, waiting... ({e})")
-#             await asyncio.sleep(5)
-#     raise Exception("Database connection failed after 3 attempts")
-
-async def init_db():
-    """Инициализация БД с ожиданием"""
-    # await wait_for_db()
-    async with get_engine() as engine:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
-AsyncSessionLocal = sessionmaker(
-    class_=AsyncSession,
-    expire_on_commit=False,
+# Создаем асинхронный движок
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
+    pool_pre_ping=True
 )
 
-async def get_db() -> AsyncIterator[AsyncSession]:
-    async with AsyncSessionLocal(bind=(await anext(get_engine()))) as session:
-        yield session
+# Создаем фабрику сессий
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False
+)
+
+async def get_db() -> AsyncSession:
+    """Получение сессии базы данных"""
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+async def init_db():
+    """Инициализация структуры базы данных"""
+    
+    logger.info("Initializing database tables...")
+    
+    async with engine.begin() as conn:
+        if settings.DEBUG:
+            logger.warning("Dropping all tables (DEBUG mode)")
+            await conn.run_sync(Base.metadata.drop_all)
+        
+        await conn.run_sync(Base.metadata.create_all)
+    
+    logger.info("Database initialized successfully")
