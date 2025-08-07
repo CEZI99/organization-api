@@ -15,7 +15,7 @@ def upgrade():
     # Таблица buildings
     op.create_table('buildings',
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('address', sa.String(length=255), nullable=False),
+        sa.Column('address', sa.String(length=255), nullable=False, unique=True),
         sa.Column('latitude', sa.Float(), nullable=False),
         sa.Column('longitude', sa.Float(), nullable=False),
         sa.PrimaryKeyConstraint('id')
@@ -24,7 +24,9 @@ def upgrade():
     op.create_table('activities',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(length=255), nullable=False),
+        sa.Column('category', sa.String(length=255), nullable=True),
         sa.Column('parent_id', sa.Integer(), nullable=True),
+        sa.Column('level', sa.Integer(), server_default='1'),
         sa.ForeignKeyConstraint(['parent_id'], ['activities.id'], ),
         sa.PrimaryKeyConstraint('id')
     )
@@ -39,7 +41,7 @@ def upgrade():
 
     op.create_table('phones',
         sa.Column('id', sa.Integer(), nullable=False),
-        sa.Column('phone', sa.String(length=50), nullable=False),
+        sa.Column('number', sa.String(length=50), nullable=False, unique=True),
         sa.Column('organization_id', sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(['organization_id'], ['organizations.id'], ),
         sa.PrimaryKeyConstraint('id')

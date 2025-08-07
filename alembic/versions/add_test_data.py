@@ -18,15 +18,15 @@ def upgrade():
     """)
     
     op.execute("""
-    INSERT INTO activities (id, name, parent_id) VALUES
-    (1, 'Еда', NULL),
-    (2, 'Мясная продукция', 1),
-    (3, 'Молочная продукция', 1),
-    (4, 'Автомобили', NULL),
-    (5, 'Грузовые', 4),
-    (6, 'Легковые', 4),
-    (7, 'Запчасти', 4),
-    (8, 'Аксессуары', 7)
+    INSERT INTO activities (id, name, category, parent_id, level) VALUES
+    (1, 'Еда', 'food', NULL, 1),
+    (2, 'Мясная продукция', 'meat', 1, 2),
+    (3, 'Молочная продукция', 'dairy', 1, 2),
+    (4, 'Автомобили', 'auto', NULL, 1),
+    (5, 'Грузовые', 'trucks', 4, 2),
+    (6, 'Легковые', 'cars', 4, 2),
+    (7, 'Запчасти', 'parts', 4, 2),
+    (8, 'Аксессуары', 'accessories', 7, 3)
     """)
 
     op.execute("""
@@ -39,7 +39,7 @@ def upgrade():
     """)
 
     op.execute("""
-    INSERT INTO phones (id, phone, organization_id) VALUES
+    INSERT INTO phones (id, number, organization_id) VALUES
     (1, '2-222-222', 1),
     (2, '3-333-333', 1),
     (3, '8-923-666-13-13', 1),
@@ -57,6 +57,7 @@ def upgrade():
     (4, 5),
     (5, 6), (5, 8)
     """)
+
 
 def downgrade():
     op.execute("DELETE FROM organization_activity")

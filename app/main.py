@@ -62,9 +62,9 @@ app.add_middleware(
 )
 
 # Подключение роутеров
-app.include_router(organizations.router, prefix="/api/organizations")
-app.include_router(buildings.router, prefix="/api/buildings")
-app.include_router(activities.router, prefix="/api/activities")
+app.include_router(organizations.router)
+app.include_router(buildings.router)
+app.include_router(activities.router)
 
 @app.get("/health")
 async def health_check():

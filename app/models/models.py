@@ -27,19 +27,17 @@ class Activity(Base):
     name = Column(String, index=True)
     category = Column(String, index=True)
     parent_id = Column(Integer, ForeignKey('activities.id'))
-    level = Column(Integer, default=1)  # Для контроля уровня вложенности
+    level = Column(Integer, default=1)
 
+    parent = relationship(
+        "Activity",
+        back_populates="children",
+        remote_side=[id]
+    )
     children = relationship(
         "Activity",
         back_populates="parent",
-        remote_side=[parent_id],
         cascade="all, delete-orphan"
-    )
-    parent = relationship("Activity", back_populates="children")
-    organizations = relationship(
-        "Organization",
-        secondary=organization_activity,
-        back_populates="activities"
     )
 
 class Organization(Base):

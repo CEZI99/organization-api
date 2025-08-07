@@ -6,8 +6,10 @@ from app.repository import Repository
 from app.schemas.organization import Organization
 from typing import List
 from app.config import settings
+from app.dependencies import verify_api_key
 
-router = APIRouter(prefix="/api/organizations", tags=["Organizations"])
+
+router = APIRouter(tags=["Organizations"], dependencies=[Depends(verify_api_key)])
 
 @router.get("/by-building/{building_id}", response_model=List[Organization])
 @cache(expire=settings.REDIS_CACHE_TTL)
