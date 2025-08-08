@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, Table
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, Table, DateTime
 from sqlalchemy.orm import relationship, declarative_base
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -39,6 +40,11 @@ class Activity(Base):
         back_populates="parent",
         cascade="all, delete-orphan"
     )
+    organizations = relationship(  # Добавляем обратную связь
+        "Organization",
+        secondary=organization_activity,
+        back_populates="activities"
+    )
 
 class Organization(Base):
     __tablename__ = 'organizations'
@@ -46,6 +52,8 @@ class Organization(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     building_id = Column(Integer, ForeignKey('buildings.id'))
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
     building = relationship("Building", back_populates="organizations")
     phones = relationship("Phone", back_populates="organization")
@@ -54,6 +62,7 @@ class Organization(Base):
         secondary=organization_activity,
         back_populates="organizations"
     )
+
 
 class Phone(Base):
     __tablename__ = 'phones'

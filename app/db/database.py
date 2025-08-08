@@ -35,14 +35,14 @@ async def get_db() -> AsyncSession:
 
 async def init_db():
     """Инициализация структуры базы данных"""
-    
+
     logger.info("Initializing database tables...")
-    
+
     async with engine.begin() as conn:
         if settings.DEBUG:
             logger.warning("Dropping all tables (DEBUG mode)")
             await conn.run_sync(Base.metadata.drop_all)
-        
+
         await conn.run_sync(Base.metadata.create_all)
-    
+
     logger.info("Database initialized successfully")

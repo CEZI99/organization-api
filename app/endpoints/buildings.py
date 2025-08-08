@@ -1,15 +1,15 @@
+from typing import List
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi_cache.decorator import cache
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.repository import Repository
 from app.schemas.building import Building
-from typing import List
 from app.config import settings
 from app.dependencies import verify_api_key
 
-
-router = APIRouter(tags=["Buildings"], dependencies=[Depends(verify_api_key)])
+# router = APIRouter(tags=["Buildings"], dependencies=[Depends(verify_api_key)])
+router = APIRouter(tags=["Buildings"])
 
 @router.get("/", response_model=List[Building])
 @cache(expire=settings.REDIS_CACHE_TTL)
@@ -20,6 +20,7 @@ async def get_buildings(
 ):
     repo = Repository(db)
     return await repo.get_buildings(skip, limit)
+
 
 @router.get("/{building_id}", response_model=Building)
 @cache(expire=settings.REDIS_CACHE_TTL)
@@ -32,6 +33,7 @@ async def get_building(
     if not building:
         raise HTTPException(status_code=404, detail="Building not found")
     return building
+
 
 @router.get("/by-address/search", response_model=List[Building])
 @cache(expire=settings.REDIS_CACHE_TTL)

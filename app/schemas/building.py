@@ -5,12 +5,8 @@ class BuildingBase(BaseModel):
     latitude: float
     longitude: float
 
-class BuildingCreate(BuildingBase):
-    pass
-
 class Building(BuildingBase):
     id: int
 
     class Config:
-        from_attributes = True
-
+        orm_mode = True  # Ключевая настройка!

@@ -8,31 +8,34 @@ from .activity import Activity
 class PhoneBase(BaseModel):
     number: str
 
-class PhoneCreate(PhoneBase):
-    pass
-
 class Phone(PhoneBase):
-    id: int
     organization_id: int
 
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class OrganizationBase(BaseModel):
     name: str
     building_id: int
 
-class OrganizationCreate(OrganizationBase):
-    activity_ids: List[int] = []
-    phones: List[PhoneCreate] = []
+    class Config:
+        orm_mode = True  # Ключевая настройка!
 
-class Organization(OrganizationBase):
+class OrganizationFull(BaseModel):
     id: int
-    building: Building
+    name: str
+    building: Building  # Измените на один объект, а не список
     activities: List[Activity] = []
     phones: List[Phone] = []
     created_at: datetime
     updated_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
+
+
+class Organization(BaseModel):
+    name: str
+
+    class Config:
+        orm_mode = True  # Ключевая настройка!

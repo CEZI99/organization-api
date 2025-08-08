@@ -35,6 +35,8 @@ def upgrade():
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(length=255), nullable=False),
         sa.Column('building_id', sa.Integer(), nullable=False),
+        sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
+        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(['building_id'], ['buildings.id'], ),
         sa.PrimaryKeyConstraint('id')
     )

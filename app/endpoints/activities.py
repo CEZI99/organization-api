@@ -8,7 +8,9 @@ from typing import List
 from app.config import settings
 from app.dependencies import verify_api_key
 
-router = APIRouter(tags=["Activities"], dependencies=[Depends(verify_api_key)])
+# router = APIRouter(tags=["Activities"], dependencies=[Depends(verify_api_key)])
+router = APIRouter(tags=["Activities"])
+
 
 @router.get("/", response_model=List[Activity])
 @cache(expire=settings.REDIS_CACHE_TTL)

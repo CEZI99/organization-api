@@ -5,6 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import Building, Organization, Activity, Phone
 from typing import List, Optional, Sequence
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Repository:
     def __init__(self, session: AsyncSession):
@@ -18,7 +21,10 @@ class Repository:
             .offset(skip)
             .limit(limit)
         )
-        return result.scalars().all()
+        res = result.scalars().all()
+        logger.info("REQ")
+        logger.info(res)
+        return res
 
     async def get_building(self, building_id: int) -> Optional[Building]:
         """Получение здания по ID"""
@@ -91,11 +97,6 @@ class Repository:
         """Получение организаций в здании"""
         result = await self.session.execute(
             select(Organization)
-            .options(
-                joinedload(Organization.building),
-                selectinload(Organization.phones),
-                selectinload(Organization.activities)
-            )
             .where(Organization.building_id == building_id)
         )
         return result.unique().scalars().all()
@@ -122,11 +123,14 @@ class Repository:
             .options(
                 joinedload(Organization.building),
                 selectinload(Organization.phones),
-                selectinload(Organization.activities)
+                selectinload(Organization.activities).joinedload(Activity.children)
             )
             .where(Organization.id == org_id)
         )
-        return result.scalars().first()
+        res = result.scalars().first()
+        logger.info("REQ")
+        logger.info(res)
+        return res
 
     async def search_organizations(self, name: str) -> Sequence[Organization]:
         """Поиск организаций по названию"""
@@ -141,24 +145,6 @@ class Repository:
         )
         return result.unique().scalars().all()
 
-    async def get_organizations_in_radius(self, lat: float, lon: float, radius: float) -> Sequence[Organization]:
-        """Поиск организаций в радиусе"""
-        buildings = (await self.session.execute(select(Building))).scalars().all()
-        building_ids = [
-            b.id for b in buildings 
-            if self._haversine(lat, lon, b.latitude, b.longitude) <= radius
-        ]
-        
-        result = await self.session.execute(
-            select(Organization)
-            .options(
-                joinedload(Organization.building),
-                selectinload(Organization.phones),
-                selectinload(Organization.activities)
-            )
-            .where(Organization.building_id.in_(building_ids))
-        )
-        return result.unique().scalars().all()
 
     async def get_organizations_in_rect(self, lat1: float, lon1: float, lat2: float, lon2: float) -> Sequence[Organization]:
         """Поиск организаций в прямоугольной области"""
@@ -183,17 +169,17 @@ class Repository:
         async def _get_children(pid: int, level: int = 1) -> List[int]:
             if level > max_level:
                 return []
-                
+
             result = await self.session.execute(
                 select(Activity.id)
                 .where(Activity.parent_id == pid)
             )
             child_ids = result.scalars().all()
             all_ids = child_ids.copy()
-            
+
             for cid in child_ids:
                 all_ids.extend(await _get_children(cid, level + 1))
-                
+
             return all_ids
 
         return await _get_children(parent_id)

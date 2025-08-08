@@ -5,16 +5,13 @@ class ActivityBase(BaseModel):
     name: str
     category: str
 
-class ActivityCreate(ActivityBase):
-    parent_id: Optional[int] = None
-
 class Activity(ActivityBase):
-    id: int
-    parent_id: Optional[int]
+    parent_id: Optional[int] = None
+    level: int
     children: List['Activity'] = []
-    
+
     class Config:
-        from_attributes = True
+        orm_mode = True  # Ключевая настройка!
 
 # Для избежания циклических импортов
 Activity.update_forward_refs()
