@@ -2,7 +2,7 @@ from sqlalchemy.future import select
 from sqlalchemy import text, and_
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import Building, Organization, Activity, Phone
+from app.models import Building, Organization, Activity
 from typing import List, Optional, Sequence
 import math
 import logging
@@ -13,86 +13,6 @@ class Repository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    # ========== Buildings Methods ==========
-    async def get_buildings(self, skip: int = 0, limit: int = 100) -> Sequence[Building]:
-        """Получение списка зданий с пагинацией"""
-        result = await self.session.execute(
-            select(Building)
-            .offset(skip)
-            .limit(limit)
-        )
-        res = result.scalars().all()
-        logger.info("REQ")
-        logger.info(res)
-        return res
-
-    async def get_building(self, building_id: int) -> Optional[Building]:
-        """Получение здания по ID"""
-        result = await self.session.execute(
-            select(Building)
-            .where(Building.id == building_id)
-        )
-        return result.scalars().first()
-
-    async def get_buildings_by_address(self, address: str) -> Sequence[Building]:
-        """Поиск зданий по адресу"""
-        result = await self.session.execute(
-            select(Building)
-            .where(Building.address.ilike(f"%{address}%"))
-        )
-        return result.scalars().all()
-
-    # ========== Activities Methods ==========
-    async def get_activities(self, skip: int = 0, limit: int = 100) -> Sequence[Activity]:
-        """Получение списка видов деятельности с пагинацией"""
-        result = await self.session.execute(
-            select(Activity)
-            .offset(skip)
-            .limit(limit)
-            .options(selectinload(Activity.children))
-        )
-        return result.scalars().all()
-
-    async def get_activity(self, activity_id: int) -> Optional[Activity]:
-        """Получение вида деятельности по ID с полной иерархией"""
-        result = await self.session.execute(
-            select(Activity)
-            .where(Activity.id == activity_id)
-            .options(
-                selectinload(Activity.parent),
-                selectinload(Activity.children),
-                selectinload(Activity.organizations)
-            )
-        )
-        return result.scalars().first()
-
-    async def get_activities_by_category(self, category: str) -> Sequence[Activity]:
-        """Получение видов деятельности по категории"""
-        result = await self.session.execute(
-            select(Activity)
-            .where(Activity.category.ilike(f"%{category}%"))
-            .options(selectinload(Activity.children))
-        )
-        return result.scalars().all()
-
-    async def get_activity_tree(self, root_id: int = None) -> Sequence[Activity]:
-        """Получение дерева видов деятельности"""
-        if root_id:
-            result = await self.session.execute(
-                select(Activity)
-                .where(Activity.id == root_id)
-                .options(selectinload(Activity.children))
-            )
-            return result.scalars().first()
-        else:
-            result = await self.session.execute(
-                select(Activity)
-                .where(Activity.parent_id == None)
-                .options(selectinload(Activity.children))
-            )
-            return result.scalars().all()
-
-    # ========== Organizations Methods ==========
     async def get_organizations_in_building(self, building_id: int) -> Sequence[Organization]:
         """Получение организаций в здании"""
         result = await self.session.execute(
@@ -132,33 +52,49 @@ class Repository:
         logger.info(res)
         return res
 
-    async def search_organizations(self, name: str) -> Sequence[Organization]:
-        """Поиск организаций по названию"""
+    async def search_organizations_by_activity(self, activity_name: str):
+        """Поиск организаций по виду деятельности (с учетом иерархии)"""
+        # Находим корневую активность и всех её потомков
+        root_activity = await self.session.execute(
+            select(Activity)
+            .where(Activity.name.ilike(f"%{activity_name}%"))
+        )
+        root_activity = root_activity.scalars().first()
+
+        if not root_activity:
+            return []
+
+        # Получаем все ID активностей в иерархии
+        activity_ids = await self._get_child_activity_ids(root_activity.id)
+
+        # Ищем организации, связанные с этими активностями
         result = await self.session.execute(
             select(Organization)
             .options(
                 joinedload(Organization.building),
-                selectinload(Organization.phones),
                 selectinload(Organization.activities)
             )
-            .where(Organization.name.ilike(f"%{name}%"))
+            .join(Organization.activities)
+            .where(Activity.id.in_(activity_ids))
         )
-        return result.unique().scalars().all()
 
+        return result.unique().scalars().all()
 
     async def get_organizations_in_rect(self, lat1: float, lon1: float, lat2: float, lon2: float) -> Sequence[Organization]:
         """Поиск организаций в прямоугольной области"""
+        min_lat, max_lat = sorted([lat1, lat2])
+        min_lon, max_lon = sorted([lon1, lon2])        
         result = await self.session.execute(
-            select(Organization)
+            select(Building)
             .options(
-                joinedload(Organization.building),
-                selectinload(Organization.phones),
-                selectinload(Organization.activities)
+                joinedload(Building.organizations)
+                .selectinload(Organization.phones),
+                joinedload(Building.organizations)
+                .selectinload(Organization.activities)
             )
-            .join(Building)
             .where(and_(
-                Building.latitude.between(min(lat1, lat2), max(lat1, lat2)),
-                Building.longitude.between(min(lon1, lon2), max(lon1, lon2))
+                Building.latitude.between(min_lat, max_lat),
+                Building.longitude.between(min_lon, max_lon)
             ))
         )
         return result.unique().scalars().all()
@@ -184,11 +120,13 @@ class Repository:
 
         return await _get_children(parent_id)
 
-    @staticmethod
-    def _haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-        """Вычисление расстояния между точками (км)"""
-        R = 6371
-        dlat = math.radians(lat2 - lat1)
-        dlon = math.radians(lon2 - lon1)
-        a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
-        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    async def search_organizations_by_name(self, name: str) -> Sequence[Organization]:
+        """Поиск организаций по частичному совпадению названия"""
+        result = await self.session.execute(
+            select(Organization)
+            .options(
+                joinedload(Organization.building)
+            )
+            .where(Organization.name.ilike(f"%{name}%"))
+        )
+        return result.unique().scalars().all()

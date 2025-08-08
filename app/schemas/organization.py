@@ -1,15 +1,36 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from datetime import datetime
-from .building import Building
-from .activity import Activity
 
 
 class PhoneBase(BaseModel):
     number: str
 
 class Phone(PhoneBase):
+    id: int
     organization_id: int
+
+    class Config:
+        orm_mode = True
+
+class BuildingBase(BaseModel):
+    address: str
+    latitude: float
+    longitude: float
+
+class Building(BuildingBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+class ActivityBase(BaseModel):
+    name: str
+    category: str
+
+class ActivitySimple(ActivityBase):
+    id: int
+    parent_id: Optional[int] = None
 
     class Config:
         orm_mode = True
@@ -19,13 +40,12 @@ class OrganizationBase(BaseModel):
     building_id: int
 
     class Config:
-        orm_mode = True  # Ключевая настройка!
+        orm_mode = True
 
-class OrganizationFull(BaseModel):
+class OrganizationFull(OrganizationBase):
     id: int
-    name: str
-    building: Building  # Измените на один объект, а не список
-    activities: List[Activity] = []
+    building: Building
+    activities: List[ActivitySimple] = []
     phones: List[Phone] = []
     created_at: datetime
     updated_at: datetime
@@ -33,9 +53,37 @@ class OrganizationFull(BaseModel):
     class Config:
         orm_mode = True
 
-
-class Organization(BaseModel):
-    name: str
+class BuildingInRect(BaseModel):
+    address: str
 
     class Config:
-        orm_mode = True  # Ключевая настройка!
+        orm_mode = True
+
+
+class Activity(ActivitySimple):
+    children: List['Activity'] = []
+
+    class Config:
+        orm_mode = True
+
+class ActivityWithLevel(ActivityBase):
+    id: int
+    level: int
+    parent_id: Optional[int] = None
+
+    class Config:
+        orm_mode = True
+
+class OrganizationWithActivities(OrganizationBase):
+    id: int
+    building: Building
+    activities: List[ActivityWithLevel] = []
+
+    class Config:
+        orm_mode = True
+
+
+class OrganizationWithBuilding(OrganizationBase):
+    building: Building
+
+Activity.update_forward_refs()

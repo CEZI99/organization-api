@@ -4,7 +4,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from redis import asyncio as aioredis
 from app.db import database
-from app.endpoints import organizations, buildings, activities
+from app.endpoints import organizations
 from app.dependencies import dependencies
 from app.config import settings
 from contextlib import asynccontextmanager
@@ -63,8 +63,6 @@ app.add_middleware(
 
 # Подключение роутеров
 app.include_router(organizations.router)
-app.include_router(buildings.router)
-app.include_router(activities.router)
 
 @app.get("/health")
 async def health_check():
